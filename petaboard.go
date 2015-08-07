@@ -8,10 +8,12 @@ import (
 	"strconv"
 	"os"
 	"bytes"
+	"flag"
 )
 
 type Post struct {
 	postDate time.Time
+	subjectString string
 	bodyString string
 	mediaLink []string
 }
@@ -96,34 +98,57 @@ func posts(url string, lastModified time.Time) ([]Post) {
 	return pList
 }
 
-func main() {
-	dataFile := "./.data"
-	_, err := os.Stat(dataFile)
-	fileExist := !os.IsNotExist(err)
-	lastModified := time.Unix(0, 0)
-	if fileExist {
-		fp, err := os.Open(dataFile)
-		errNotNilToPanic(err)
-		defer fp.Close()
-		buf := make([]byte, 10)
-		fp.Read(buf)
-		b := bytes.NewBuffer(buf)
-		unixTime, err := strconv.ParseInt(b.String(), 10, 64)
-		errNotNilToPanic(err)
-		lastModified = time.Unix(unixTime, 0)
+var dlDir string
+var dataFile string
+var links []string
+
+func init() {
+	flag.StringVar(&dlDir, "dir", ".", "Download directory (default current directory)")
+	flag.StringVar(&dataFile, "datafile", ".data", "Data file (default Download directory/.data)")
+	flag.Parse()
+	if dataFile == ".data" {
+		dataFile = dlDir + "/" + dataFile
 	}
-	urlString := "http://109815.peta2.jp/646757.html"
-	pList := posts(urlString, lastModified)
-	for _, post := range pList {
-		fmt.Println(post.postDate)
-		for _, media := range post.mediaLink {
-			fmt.Println(media)
+	links := flag.Args()
+	if len(links) == 0 {
+		flag.Usage = func() {
+			fmt.Fprintf(os.Stderr, `Usage: %s [OPTIONS] URL1 URL2 ...
+Options:
+`, os.Args[0])
+			flag.PrintDefaults()
 		}
+		flag.Usage()
 	}
-	if len(pList) > 1 {
-		fp, err := os.Create(dataFile)
-		errNotNilToPanic(err)
-		defer fp.Close()
-		fp.WriteString(strconv.FormatInt(pList[0].postDate.Unix(), 10))
+}
+
+func main() {
+	for _, link := range links {
+		_, err := os.Stat(dataFile)
+		fileExist := !os.IsNotExist(err)
+		lastModified := time.Unix(0, 0)
+		if fileExist {
+			fp, err := os.Open(dataFile)
+			errNotNilToPanic(err)
+			defer fp.Close()
+			buf := make([]byte, 10)
+			fp.Read(buf)
+			b := bytes.NewBuffer(buf)
+			unixTime, err := strconv.ParseInt(b.String(), 10, 64)
+			errNotNilToPanic(err)
+			lastModified = time.Unix(unixTime, 0)
+		}
+		pList := posts(link, lastModified)
+		for _, post := range pList {
+			fmt.Println(post.postDate)
+			for _, media := range post.mediaLink {
+				fmt.Println(media)
+			}
+		}
+		if len(pList) > 1 {
+			fp, err := os.Create(dataFile)
+			errNotNilToPanic(err)
+			defer fp.Close()
+			fp.WriteString(strconv.FormatInt(pList[0].postDate.Unix(), 10))
+		}
 	}
 }
