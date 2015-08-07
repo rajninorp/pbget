@@ -1,2 +1,0 @@
-# pbget
-petaboard image downloader
