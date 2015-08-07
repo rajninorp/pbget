@@ -92,7 +92,6 @@ func posts(url string, lastModified time.Time) ([]Post) {
 			}
 			return true
 		})
-		break
 	}
 	return pList
 }
