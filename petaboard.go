@@ -109,7 +109,7 @@ func init() {
 	if dataFile == ".data" {
 		dataFile = dlDir + "/" + dataFile
 	}
-	links := flag.Args()
+	links = flag.Args()
 	if len(links) == 0 {
 		flag.Usage = func() {
 			fmt.Fprintf(os.Stderr, `Usage: %s [OPTIONS] URL1 URL2 ...
@@ -139,9 +139,14 @@ func main() {
 		}
 		pList := posts(link, lastModified)
 		for _, post := range pList {
-			fmt.Println(post.postDate)
 			for _, media := range post.mediaLink {
-				fmt.Println(media)
+				client := &Target{
+					Url:media,
+					Overwrite:true,
+				}
+				if err := client.Get(); err != nil {
+					fmt.Println(err)
+				}
 			}
 		}
 		if len(pList) > 1 {
