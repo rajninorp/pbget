@@ -9,6 +9,11 @@ import (
 	"os"
 	"bytes"
 	"flag"
+	"path"
+	"strings"
+	"net/http"
+	"io/ioutil"
+
 )
 
 type Post struct {
@@ -156,4 +161,48 @@ func main() {
 			fp.WriteString(strconv.FormatInt(pList[0].postDate.Unix(), 10))
 		}
 	}
+}
+
+type Dl interface {
+	Get() (error)
+}
+
+type Target struct {
+	Url string
+	Dir string
+	Filename string
+	Overwrite bool
+}
+
+func (t *Target) Get() (error) {
+	url := t.Url
+	if len(url) == 0 {
+		return nil
+	}
+	dir := strings.TrimRight(t.Dir, "/")
+	if len(dir) == 0 {
+		dir = "."
+	}
+	filename := dir + "/" + t.Filename
+	if len(t.Filename) == 0 {
+		filename = dir + "/" + path.Base(url)
+	}
+	_, err := os.Stat(filename)
+	if os.IsNotExist(err) || t.Overwrite {
+		resp, err := http.Get(url)
+		if err != nil {
+			return err
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		file.Write(body)
+	}
+	return err
 }
